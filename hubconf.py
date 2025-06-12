@@ -1,9 +1,8 @@
 # hubconf.py
 
-import torch
 from netvlad import NetVLAD  # Import your model class
 
-def my_model(pretrained=False, **kwargs):
+def my_model():
     """
     Example function to load the model.
     Args:
@@ -12,5 +11,5 @@ def my_model(pretrained=False, **kwargs):
     Returns:
         torch.nn.Module: The loaded model.
     """
-    model = NetVLAD(**kwargs)
+    model = NetVLAD()
     return model
