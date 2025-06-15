@@ -76,10 +76,16 @@ for i, pred in enumerate(predictions):
     plt.subplot(1, 2, 1)
     plt.imshow(Image.open(query_paths_list[i]))
     plt.title(f"Query {i}")
+    plt.xticks([])
+    plt.yticks([])
     plt.subplot(1, 2, 2)
     plt.imshow(Image.open(db_paths_list[pred[0]]))
     plt.title(f"Top1 Match {pred[0]}")
-    plt.show()    
+    plt.xticks([])
+    plt.yticks([])
+    plt.savefig(f"./toy_dataset/example_results/query_{i}_top1_match.png")  
+    plt.tight_layout()
+    plt.show()
 
 
 
