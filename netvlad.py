@@ -50,6 +50,7 @@ class NetVLAD(nn.Module, metaclass=ABCMeta):
 
     def __init__(self, model_name="VGG16-NetVLAD-Pitts30K", whiten=True):
         """Initialize the model with the given configuration."""
+        super().__init__()
         self.model_name = model_name
         self.whiten = whiten
         
