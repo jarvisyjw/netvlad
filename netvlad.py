@@ -13,35 +13,6 @@ from scipy.io import loadmat
 
 EPS = 1e-6
 
-class BaseModel(nn.Module, metaclass=ABCMeta):
-    default_conf = {}
-    required_inputs = []
-
-    def __init__(self, conf):
-        """Perform some logic and call the _init method of the child model."""
-        super().__init__()
-        self.conf = conf = {**self.default_conf, **conf}
-        self.required_inputs = copy(self.required_inputs)
-        self._init(conf)
-        sys.stdout.flush()
-
-    def forward(self, data):
-        """Check the data and call the _forward method of the child model."""
-        for key in self.required_inputs:
-            assert key in data, "Missing key {} in data".format(key)
-        return self._forward(data)
-
-    @abstractmethod
-    def _init(self, conf):
-        """To be implemented by the child class."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def _forward(self, data):
-        """To be implemented by the child class."""
-        raise NotImplementedError
-
-
 class NetVLADLayer(nn.Module):
     def __init__(self, input_dim=512, K=64, score_bias=False, intranorm=True):
         super().__init__()
@@ -66,9 +37,9 @@ class NetVLADLayer(nn.Module):
         return desc
 
 
-class NetVLAD(BaseModel):
-    default_conf = {"model_name": "VGG16-NetVLAD-Pitts30K", "whiten": True}
-    required_inputs = ["image"]
+class NetVLAD(nn.Module, metaclass=ABCMeta):
+    # default_conf = {"model_name": "VGG16-NetVLAD-Pitts30K", "whiten": True}
+    # required_inputs = ["image"]
 
     # Models exported using
     # https://github.com/uzh-rpg/netvlad_tf_open/blob/master/matlab/net_class2struct.m.
@@ -77,19 +48,23 @@ class NetVLAD(BaseModel):
         "VGG16-NetVLAD-TokyoTM": "https://cvg-data.inf.ethz.ch/hloc/netvlad/TokyoTM_struct.mat",  # noqa: E501
     }
 
-    def _init(self, conf):
-        if conf["model_name"] not in self.checkpoint_urls:
+    def _init(self, model_name="VGG16-NetVLAD-Pitts30K", whiten=True):
+        """Initialize the model with the given configuration."""
+        self.model_name = model_name
+        self.whiten = whiten
+        
+        if self.model_name not in self.checkpoint_urls:
             raise ValueError(
-                f'{conf["model_name"]} not in {self.checkpoint_urls.keys()}.'
+                f'{self.model_name} not in {self.checkpoint_urls.keys()}.'
             )
 
         # Download the checkpoint.
         checkpoint_path = Path(
-            torch.hub.get_dir(), "netvlad", conf["model_name"] + ".mat"
+            torch.hub.get_dir(), "netvlad", self.model_name + ".mat"
         )
         if not checkpoint_path.exists():
             checkpoint_path.parent.mkdir(exist_ok=True, parents=True)
-            url = self.checkpoint_urls[conf["model_name"]]
+            url = self.checkpoint_urls[self.model_name]
             torch.hub.download_url_to_file(url, checkpoint_path)
 
         # Create the network.
@@ -100,8 +75,8 @@ class NetVLAD(BaseModel):
 
         self.netvlad = NetVLADLayer()
 
-        if conf["whiten"]:
-            self.whiten = nn.Linear(self.netvlad.output_dim, 4096)
+        if self.whiten:
+            self.whiten_layer = nn.Linear(self.netvlad.output_dim, 4096)
 
         # Parse MATLAB weights using https://github.com/uzh-rpg/netvlad_tf_open
         mat = loadmat(checkpoint_path, struct_as_record=False, squeeze_me=True)
@@ -134,15 +109,15 @@ class NetVLAD(BaseModel):
         self.netvlad.centers = nn.Parameter(center_w)
 
         # Whitening weights.
-        if conf["whiten"]:
+        if self.whiten:
             w = mat["net"].layers[33].weights[0]  # Shape: 1 x 1 x IN x OUT
             b = mat["net"].layers[33].weights[1]  # Shape: OUT
             # Prepare for PyTorch - make sure it is float32 and has right shape
             w = torch.tensor(w).float().squeeze().permute([1, 0])  # OUT x IN
             b = torch.tensor(b.squeeze()).float()  # Shape: OUT
             # Update layer weights.
-            self.whiten.weight = nn.Parameter(w)
-            self.whiten.bias = nn.Parameter(b)
+            self.whiten_layer.weight = nn.Parameter(w)
+            self.whiten_layer.bias = nn.Parameter(b)
 
         # Preprocessing parameters.
         self.preprocess = {
@@ -169,8 +144,8 @@ class NetVLAD(BaseModel):
         desc = self.netvlad(descriptors)
 
         # Whiten if needed.
-        if hasattr(self, "whiten"):
-            desc = self.whiten(desc)
+        if self.whiten:
+            desc = self.whiten_layer(desc)
             desc = F.normalize(desc, dim=1)  # Final L2 normalization.
 
         return desc

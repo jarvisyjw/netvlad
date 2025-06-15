@@ -11,6 +11,5 @@ def my_model(model_name='VGG16-NetVLAD-Pitts30K', whiten=True):
     Returns:
         torch.nn.Module: The loaded model.
     """
-    conf = {"model_name": model_name, "whiten": whiten}
-    model = NetVLAD(conf)
+    model = NetVLAD(model_name=model_name, whiten=whiten)
     return model
