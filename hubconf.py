@@ -2,7 +2,7 @@
 
 from netvlad import NetVLAD  # Import your model class
 
-def my_model():
+def my_model(model_name='VGG16-NetVLAD-Pitts30K', whiten=True):
     """
     Example function to load the model.
     Args:
@@ -11,5 +11,6 @@ def my_model():
     Returns:
         torch.nn.Module: The loaded model.
     """
-    model = NetVLAD()
+    conf = {"model_name": model_name, "whiten": whiten}
+    model = NetVLAD(conf)
     return model
