@@ -48,7 +48,7 @@ class NetVLAD(nn.Module, metaclass=ABCMeta):
         "VGG16-NetVLAD-TokyoTM": "https://cvg-data.inf.ethz.ch/hloc/netvlad/TokyoTM_struct.mat",  # noqa: E501
     }
 
-    def _init(self, model_name="VGG16-NetVLAD-Pitts30K", whiten=True):
+    def __init__(self, model_name="VGG16-NetVLAD-Pitts30K", whiten=True):
         """Initialize the model with the given configuration."""
         self.model_name = model_name
         self.whiten = whiten
