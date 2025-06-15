@@ -126,7 +126,7 @@ class NetVLAD(nn.Module, metaclass=ABCMeta):
             "std": np.array([1, 1, 1], dtype=np.float32),
         }
 
-    def _forward(self, image):
+    def forward(self, image):
         assert image.shape[1] == 3
         assert image.min() >= -EPS and image.max() <= 1 + EPS
         image = torch.clamp(image * 255, 0.0, 255.0)  # Input should be 0-255.
